@@ -13,7 +13,7 @@ namespace MagicEntry.Plugins.FamilyEditor.Services
         #region Методы пересохранения
 
         // Пересохраняет файл семейства или шаблона
-        public bool ResaveDocument(Document doc)
+        public bool ResaveDocument(Document doc, bool showMessage = true)
         {
             if (doc == null)
                 return false;
@@ -25,24 +25,11 @@ namespace MagicEntry.Plugins.FamilyEditor.Services
                 TaskDialog.Show(Messages.TITLE_ERROR, Messages.ERROR_DOCUMENT_NOT_SAVED);
                 return false;
             }
-
-            if (doc.IsFamilyDocument)
-            {
-                return ResaveFamilyDocument(doc, originalPath);
-            }
-            else if (IsTemplateDocument(originalPath))
-            {
-                return ResaveTemplateDocument(doc, originalPath);
-            }
-            else
-            {
-                TaskDialog.Show(Messages.TITLE_ERROR, Messages.ERROR_NOT_FAMILY_OR_TEMPLATE);
-                return false;
-            }
+            return ResaveFamilyDocument(doc, originalPath, showMessage);
         }
 
         // Пересохраняет документ семейства
-        private bool ResaveFamilyDocument(Document doc, string originalPath)
+        private bool ResaveFamilyDocument(Document doc, string originalPath, bool showMessage)
         {
             try
             {
@@ -55,33 +42,9 @@ namespace MagicEntry.Plugins.FamilyEditor.Services
                 doc.SaveAs(originalPath);
                 File.Delete(tempPath);
 
+                if(showMessage)
                 TaskDialog.Show(Messages.TITLE_SUCCESS,
                     $"{Messages.SUCCESS_FAMILY_SAVED}\n{originalPath}");
-                return true;
-            }
-            catch (Exception)
-            {
-                TaskDialog.Show(Messages.TITLE_ERROR, Messages.ERROR_SAVE_FAILED);
-                return false;
-            }
-        }
-
-        // Пересохраняет документ шаблона
-        private bool ResaveTemplateDocument(Document doc, string originalPath)
-        {
-            try
-            {
-                string tempPath = GenerateTempPath(originalPath);
-
-                doc.SaveAs(tempPath);
-                Thread.Sleep(AppConstants.FILE_OPERATION_DELAY);
-
-                File.Delete(originalPath);
-                doc.SaveAs(originalPath);
-                File.Delete(tempPath);
-
-                TaskDialog.Show(Messages.TITLE_SUCCESS,
-                    $"{Messages.SUCCESS_TEMPLATE_SAVED}\n{originalPath}");
                 return true;
             }
             catch (Exception)
@@ -132,13 +95,6 @@ namespace MagicEntry.Plugins.FamilyEditor.Services
         #endregion
 
         #region Вспомогательные методы
-
-        // Проверяет, является ли файл шаблоном
-        private bool IsTemplateDocument(string filePath)
-        {
-            return Path.GetExtension(filePath).Equals(AppConstants.TEMPLATE_EXTENSION,
-                StringComparison.OrdinalIgnoreCase);
-        }
 
         // Генерирует путь для временного файла
         private string GenerateTempPath(string originalPath)

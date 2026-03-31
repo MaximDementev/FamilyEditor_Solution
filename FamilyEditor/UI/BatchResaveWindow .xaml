@@ -1,0 +1,27 @@
+﻿<Window x:Class="MagicEntry.Plugins.FamilyEditor.Views.BatchResaveWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Batch Resave"
+        Height="400"
+        Width="300">
+
+        <StackPanel>
+
+        <StackPanel Orientation="Horizontal">
+            <Button Content="All" Click="SelectAll_Click"/>
+            <Button Content="None" Click="DeselectAll_Click"/>
+        </StackPanel>
+
+        <ListBox ItemsSource="{Binding Documents}">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <CheckBox Content="{Binding Name}"
+                              IsChecked="{Binding IsSelected}"/>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <Button Content="Run" Click="Run_Click"/>
+
+    </StackPanel>
+</Window>
