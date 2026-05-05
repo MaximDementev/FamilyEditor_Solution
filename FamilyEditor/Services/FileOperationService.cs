@@ -49,7 +49,28 @@ namespace MagicEntry.Plugins.FamilyEditor.Services
             }
             catch (Exception)
             {
-                TaskDialog.Show(Messages.TITLE_ERROR, Messages.ERROR_SAVE_FAILED);
+                if (showMessage)
+                    TaskDialog.Show(Messages.TITLE_ERROR, Messages.ERROR_SAVE_FAILED);
+                return false;
+            }
+        }
+
+        public bool SaveDocument(Document doc, bool showMessage = true)
+        {
+            try
+            {
+                doc.Save();
+
+                if (showMessage)
+                    TaskDialog.Show(Messages.TITLE_SUCCESS, "Документ сохранён");
+
+                return true;
+            }
+            catch
+            {
+                if (showMessage)
+                    TaskDialog.Show(Messages.TITLE_ERROR, Messages.ERROR_SAVE_FAILED);
+
                 return false;
             }
         }

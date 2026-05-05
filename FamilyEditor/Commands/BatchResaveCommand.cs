@@ -105,6 +105,7 @@ namespace MagicEntry.Plugins.FamilyEditor.Commands
                     return Result.Cancelled;
 
                 var selected = window.Result;
+                var mode = window.Mode;
 
                 var fileService = new FileOperationService();
 
@@ -115,7 +116,22 @@ namespace MagicEntry.Plugins.FamilyEditor.Commands
                 {
                     try
                     {
-                        if (fileService.ResaveDocument(item.Document, false))
+                        bool result;
+
+                        if (mode == SaveMode.Save)
+                        {
+                            result = fileService.SaveDocument(item.Document, false);
+                        }
+                        else if (mode == SaveMode.Resave)
+                        {
+                            result = fileService.ResaveDocument(item.Document, false);
+                        }
+                        else
+                        {
+                            result = false;
+                        }
+
+                        if (result)
                             success.Add(item.Name);
                         else
                             failed.Add(item.Name);
