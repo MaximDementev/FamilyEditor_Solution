@@ -3,9 +3,9 @@ using System.IO;
 using System.Threading;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
-using MagicEntry.Plugins.FamilyEditor.Constants;
+using Neuroptera.Plugins.FamilyEditor.Constants;
 
-namespace MagicEntry.Plugins.FamilyEditor.Services
+namespace Neuroptera.Plugins.FamilyEditor.Services
 {
     // Сервис для операций с файлами семейств и шаблонов
     public class FileOperationService

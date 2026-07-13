@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Windows;
 
-namespace MagicEntry.Plugins.FamilyEditor.Views
+namespace Neuroptera.Plugins.FamilyEditor.Views
 {
     public partial class BatchResaveWindow : Window
     {

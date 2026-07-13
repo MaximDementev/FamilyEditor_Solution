@@ -1,4 +1,4 @@
-﻿<Window x:Class="MagicEntry.Plugins.FamilyEditor.Views.BatchResaveWindow"
+﻿<Window x:Class="Neuroptera.Plugins.FamilyEditor.Views.BatchResaveWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Все открытые файлы"

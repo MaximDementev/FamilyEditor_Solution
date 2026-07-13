@@ -1,105 +1,59 @@
 ﻿using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
-using MagicEntry.Core.Models;
-using MagicEntry.Core.Services;
-using MagicEntry.Plugins.FamilyEditor.Constants;
-using MagicEntry.Plugins.FamilyEditor.Services;
-using MagicEntry.Plugins.FamilyEditor.Views;
+using Neuroptera.Contracts.PluginLogging;
+using Neuroptera.Plugins.FamilyEditor.Constants;
+using Neuroptera.Plugins.FamilyEditor.Services;
+using Neuroptera.Plugins.FamilyEditor.Views;
+using Neuroptera.Revit.Contracts.PluginLogging;
 using System;
-using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace MagicEntry.Plugins.FamilyEditor.Commands
+namespace Neuroptera.Plugins.FamilyEditor.Commands
 {
     // Команда для пересохранения файлов семейств и шаблонов
     [Transaction(TransactionMode.Manual)]
     [Regeneration(RegenerationOption.Manual)]
     public class BatchResaveCommand : IExternalCommand
     {
-
         #region Поля
 
         private FileOperationService _fileService;
 
         #endregion
 
-        #region IPlugin Implementation
-
-        public PluginInfo Info { get; set; }
-        public bool IsEnabled { get; set; }
-
-        // Инициализирует плагин при загрузке системы
-        public bool Initialize()
-        {
-            try
-            {
-                var pathService = ServiceProvider.GetService<IPathService>();
-                var initService = ServiceProvider.GetService<IPluginInitializationService>();
-
-                if (pathService == null || initService == null)
-                    return false;
-
-                var pluginName = Info?.Name ?? AppConstants.PLUGIN_NAME;
-                if (!initService.InitializePlugin(pluginName))
-                    return false;
-
-                var settingsPath = pathService.GetPluginUserDataFilePath(pluginName,
-                    AppConstants.SETTINGS_FILE_NAME);
-                if (!File.Exists(settingsPath))
-                {
-                    File.WriteAllText(settingsPath,
-                        $"{AppConstants.PLUGIN_DISPLAY_NAME} Settings\nInitialized: {DateTime.Now}");
-                }
-
-                _fileService = new FileOperationService();
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        // Освобождает ресурсы плагина
-        public void Shutdown()
-        {
-            _fileService = null;
-        }
-
-        #endregion
-
-
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
+            var uiApp = commandData.Application;
+            var doc = uiApp.ActiveUIDocument.Document;
+            var journal = PluginOperationJournal.Start(
+                FamilyEditorOperations.PluginId,
+                FamilyEditorOperations.BatchResave,
+                doc.Title);
 
             try
             {
-                var pathService = ServiceProvider.GetService<IPathService>();
-                var initService = ServiceProvider.GetService<IPluginInitializationService>();
-
-                if (pathService == null || initService == null)
-                {
-                    TaskDialog.Show(Messages.TITLE_ERROR, Messages.ERROR_SERVICES_UNAVAILABLE);
-                    return Result.Failed;
-                }
+                journal.Step("Запуск пакетного пересохранения");
 
                 if (_fileService == null)
                     _fileService = new FileOperationService();
 
-
-
-                var uiApp = commandData.Application;
-
+                journal.Step("Получение списка документов");
                 var docs = GetValidDocuments(uiApp);
 
                 if (!docs.Any())
                 {
-                    TaskDialog.Show("Info", "Нет подходящих документов");
+                    RevitPluginErrorHandling.ShowValidation(
+                        "Нет подходящих документов",
+                        "Откройте семейства или шаблоны для пересохранения.",
+                        FamilyEditorOperations.PluginId,
+                        FamilyEditorOperations.BatchResave,
+                        doc);
                     return Result.Cancelled;
                 }
 
+                journal.Step("Отображение окна выбора документов");
                 var window = new BatchResaveWindow(docs);
                 if (window.ShowDialog() != true)
                     return Result.Cancelled;
@@ -107,6 +61,7 @@ namespace MagicEntry.Plugins.FamilyEditor.Commands
                 var selected = window.Result;
                 var mode = window.Mode;
 
+                journal.Step("Пакетная обработка документов", selected.Count.ToString());
                 var fileService = new FileOperationService();
 
                 var success = new List<string>();
@@ -142,19 +97,19 @@ namespace MagicEntry.Plugins.FamilyEditor.Commands
                     }
                 }
 
+                journal.Step("Отображение результатов");
                 ShowResult(success, failed);
 
+                journal.Complete($"Обработано: {success.Count} успешно, {failed.Count} с ошибками");
                 return Result.Succeeded;
             }
             catch (Exception ex)
             {
                 message = ex.Message;
-                TaskDialog.Show(Messages.TITLE_ERROR,
-                    $"{Messages.ERROR_EXECUTION}: {ex.Message}");
+                RevitPluginErrorHandling.Handle(ex, journal);
                 return Result.Failed;
             }
         }
-
 
         private List<Document> GetValidDocuments(UIApplication app)
         {

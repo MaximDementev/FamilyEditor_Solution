@@ -1,4 +1,4 @@
-﻿namespace MagicEntry.Plugins.FamilyEditor.Constants
+﻿namespace Neuroptera.Plugins.FamilyEditor.Constants
 {
     // Статический класс для хранения постоянных данных плагина
     public static class AppConstants

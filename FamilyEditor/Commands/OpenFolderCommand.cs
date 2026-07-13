@@ -1,70 +1,22 @@
 ﻿using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
-using MagicEntry.Core.Interfaces;
-using MagicEntry.Core.Models;
-using MagicEntry.Core.Services;
-using MagicEntry.Plugins.FamilyEditor.Constants;
-using MagicEntry.Plugins.FamilyEditor.Services;
+using Neuroptera.Contracts.PluginLogging;
+using Neuroptera.Plugins.FamilyEditor.Constants;
+using Neuroptera.Plugins.FamilyEditor.Services;
+using Neuroptera.Revit.Contracts.PluginLogging;
 using System;
-using System.IO;
-using System.Runtime.Remoting.Messaging;
 
-namespace MagicEntry.Plugins.FamilyEditor.Commands
+namespace Neuroptera.Plugins.FamilyEditor.Commands
 {
     // Команда для открытия папки с файлом семейства или шаблона
     [Transaction(TransactionMode.Manual)]
     [Regeneration(RegenerationOption.Manual)]
-    public class OpenFolderCommand : IExternalCommand, IPlugin
+    public class OpenFolderCommand : IExternalCommand
     {
         #region Поля
 
         private FileOperationService _fileService;
-
-        #endregion
-
-        #region IPlugin Implementation
-
-        public PluginInfo Info { get; set; }
-        public bool IsEnabled { get; set; }
-
-        // Инициализирует плагин при загрузке системы
-        public bool Initialize()
-        {
-            try
-            {
-                var pathService = ServiceProvider.GetService<IPathService>();
-                var initService = ServiceProvider.GetService<IPluginInitializationService>();
-
-                if (pathService == null || initService == null)
-                    return false;
-
-                var pluginName = Info?.Name ?? AppConstants.PLUGIN_NAME;
-                if (!initService.InitializePlugin(pluginName))
-                    return false;
-
-                var settingsPath = pathService.GetPluginUserDataFilePath(pluginName,
-                    AppConstants.SETTINGS_FILE_NAME);
-                if (!File.Exists(settingsPath))
-                {
-                    File.WriteAllText(settingsPath,
-                        $"{AppConstants.PLUGIN_DISPLAY_NAME} Settings\nInitialized: {DateTime.Now}");
-                }
-
-                _fileService = new FileOperationService();
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        // Освобождает ресурсы плагина
-        public void Shutdown()
-        {
-            _fileService = null;
-        }
 
         #endregion
 
@@ -73,30 +25,32 @@ namespace MagicEntry.Plugins.FamilyEditor.Commands
         // Выполняет команду открытия папки
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
+            var doc = commandData.Application.ActiveUIDocument.Document;
+            var journal = PluginOperationJournal.Start(
+                FamilyEditorOperations.PluginId,
+                FamilyEditorOperations.OpenFolder,
+                doc.Title);
+
             try
             {
-                var pathService = ServiceProvider.GetService<IPathService>();
-                var initService = ServiceProvider.GetService<IPluginInitializationService>();
-
-                if (pathService == null || initService == null)
-                {
-                    TaskDialog.Show(Messages.TITLE_ERROR, Messages.ERROR_SERVICES_UNAVAILABLE);
-                    return Result.Failed;
-                }
+                journal.Step("Запуск команды открытия папки");
 
                 if (_fileService == null)
                     _fileService = new FileOperationService();
 
-                Document doc = commandData.Application.ActiveUIDocument.Document;
-
+                journal.Step("Открытие папки с файлом документа");
                 bool success = _fileService.OpenFileFolder(doc);
-                return success ? Result.Succeeded : Result.Failed;
+
+                if (!success)
+                    return Result.Failed;
+
+                journal.Complete("Папка с файлом открыта");
+                return Result.Succeeded;
             }
             catch (Exception ex)
             {
                 message = ex.Message;
-                TaskDialog.Show(Messages.TITLE_ERROR,
-                    $"{Messages.ERROR_EXECUTION}: {ex.Message}");
+                RevitPluginErrorHandling.Handle(ex, journal);
                 return Result.Failed;
             }
         }
